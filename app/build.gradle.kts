@@ -47,7 +47,13 @@ android {
     packaging {
         // Extract libtailscale.so to the native library dir so the shell user can exec it.
         jniLibs { useLegacyPackaging = true }
-        resources { excludes += listOf("META-INF/*.kotlin_module", "META-INF/versions/**") }
+        resources {
+            excludes += listOf(
+                "META-INF/*.kotlin_module", "META-INF/versions/**",
+                "META-INF/LICENSE.md", "META-INF/LICENSE-notice.md", "META-INF/NOTICE.md",
+                "META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/DEPENDENCIES", "META-INF/INDEX.LIST",
+            )
+        }
     }
 
     lint {
@@ -58,5 +64,10 @@ android {
 
 dependencies {
     implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
-    implementation("dev.mobile:dadb:1.2.8")
+    implementation("dev.mobile:dadb:1.2.8") {
+        // dadb's POM lists JUnit's native test launcher as a runtime dependency; the app never uses it.
+        exclude(group = "org.junit.platform")
+        exclude(group = "org.junit.jupiter")
+        exclude(group = "org.opentest4j")
+    }
 }
