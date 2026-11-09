@@ -179,6 +179,7 @@ public final class DaemonMain {
             s.put("version", version);
             s.put("mqtt", cfg.brokerHost.isEmpty() ? "not configured" : mqtt.state());
             s.put("tailscale", tailscale == null ? "off" : tailscale.state());
+            if (tailscale != null) s.put("tailscaleLog", TailscaleRunner.logTail(4));
             s.put("lastPublish", lastPublishAt == 0 ? "never" : iso(lastPublishAt));
             s.put("error", lastError);
             s.put("location", loc == null ? "no fix" : new JSONObject(loc));

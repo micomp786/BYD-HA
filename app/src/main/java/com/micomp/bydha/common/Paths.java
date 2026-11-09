@@ -18,7 +18,10 @@ public final class Paths {
     public static final String DISABLED = BASE + "/disabled";
     public static final String TS_DIR = BASE + "/ts";
     public static final String TS_SOCKET = TS_DIR + "/tailscaled.sock";
+    /** Copy of the APK's libtailscale.so; the shell user may not exec inside /data/app. */
+    public static final String TS_BINARY = TS_DIR + "/tailscaled";
     public static final String TS_CLI_LINK = TS_DIR + "/tailscale";
+    public static final String TS_LOG = TS_DIR + "/tailscaled.log";
 
     public static final int SOCKS_PORT = 1055;
 }

@@ -65,8 +65,9 @@ final class VehicleReader {
         Object ev = s.get("ev_range_km"), fu = s.get("fuel_range_km");
         s.put("total_range_km", ev != null && fu != null ? (Long) ev + (Long) fu : null);
 
+        // Values above 8000 are the HAL's "engine off / no reading" rail (seen: 8151 while parked).
         Double rpm = num(byd.get(Byd.ENGINE, "getEngineSpeed"));
-        s.put("engine_rpm", in(rpm, 0, 9000) ? (long) Math.round(rpm) : null);
+        s.put("engine_rpm", in(rpm, 0, 8000) ? (long) Math.round(rpm) : null);
 
         // ---------- Distances ----------
         Double odo = num(byd.get(Byd.STATISTIC, "getTotalMileageValue"));

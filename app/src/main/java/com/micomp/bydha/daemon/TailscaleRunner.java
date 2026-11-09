@@ -26,13 +26,13 @@ final class TailscaleRunner {
     private static final String TAG = "Tailscale";
 
     private final Config cfg;
-    private final String binary;
+    private final String source;
     private Process daemon;
     private volatile String state = "off";
 
     TailscaleRunner(Context ctx, Config cfg) {
         this.cfg = cfg;
-        this.binary = ctx.getApplicationInfo().nativeLibraryDir + "/libtailscale.so";
+        this.source = ctx.getApplicationInfo().nativeLibraryDir + "/libtailscale.so";
     }
 
     String state() {
@@ -41,20 +41,26 @@ final class TailscaleRunner {
 
     /** Starts tailscaled and logs in. Safe to call again to restart a dead daemon. */
     synchronized void start() {
-        if (!new File(binary).canExecute()) {
-            state = "error: tailscale binary missing (" + binary + ")";
+        if (!new File(source).exists()) {
+            state = "error: tailscale binary missing from the APK (" + source + ")";
             Log.i(TAG, state);
             return;
         }
         try {
             new File(Paths.TS_DIR).mkdirs();
-            run(5, "sh", "-c", "ln -sf '" + binary + "' '" + Paths.TS_CLI_LINK + "'");
             // A tailscaled left over from a previous daemon run holds the socket and port.
-            run(5, "sh", "-c", "pkill -f -- '--statedir=" + Paths.TS_DIR + "' ; true");
+            run(5, "sh", "-c", "pkill -f '" + Paths.TS_BINARY + "' ; true");
+            // Run from a copy in our own directory, like Overdrive does: SELinux may refuse the
+            // shell user exec rights inside the app's /data/app install folder.
+            String copy = run(30, "sh", "-c", "cmp -s '" + source + "' '" + Paths.TS_BINARY + "' || "
+                    + "{ cp -f '" + source + "' '" + Paths.TS_BINARY + ".new' && mv -f '" + Paths.TS_BINARY
+                    + ".new' '" + Paths.TS_BINARY + "'; }; chmod 755 '" + Paths.TS_BINARY + "' && "
+                    + "ln -sf '" + Paths.TS_BINARY + "' '" + Paths.TS_CLI_LINK + "' && echo ok");
+            if (!copy.endsWith("ok")) throw new IllegalStateException("could not install binary: " + copy);
             new File(Paths.TS_SOCKET).delete();
 
             state = "starting";
-            ProcessBuilder pb = new ProcessBuilder(binary,
+            ProcessBuilder pb = new ProcessBuilder(Paths.TS_BINARY,
                     "--tun=userspace-networking",
                     "--socks5-server=127.0.0.1:" + Paths.SOCKS_PORT,
                     "--statedir=" + Paths.TS_DIR,
@@ -62,13 +68,17 @@ final class TailscaleRunner {
                     "--port=0",
                     "--no-logs-no-support");
             pb.redirectErrorStream(true);
-            pb.redirectOutput(ProcessBuilder.Redirect.appendTo(new File(Paths.TS_DIR, "tailscaled.log")));
+            pb.redirectOutput(ProcessBuilder.Redirect.appendTo(new File(Paths.TS_LOG)));
             pb.environment().put("HOME", Paths.TS_DIR);
             daemon = pb.start();
             Log.i(TAG, "tailscaled started");
 
-            for (int i = 0; i < 40 && !new File(Paths.TS_SOCKET).exists(); i++) {
+            for (int i = 0; i < 40 && !new File(Paths.TS_SOCKET).exists() && daemon.isAlive(); i++) {
                 Thread.sleep(500);
+            }
+            if (!daemon.isAlive()) {
+                throw new IllegalStateException("tailscaled exited with " + daemon.exitValue()
+                        + ": " + logTail(3));
             }
 
             List<String> up = new ArrayList<>(Arrays.asList(Paths.TS_CLI_LINK,
@@ -77,11 +87,22 @@ final class TailscaleRunner {
                     "--accept-dns=false", "--accept-routes=false", "--timeout=90s"));
             if (!cfg.tailscaleAuthKey.isEmpty()) up.add("--auth-key=" + cfg.tailscaleAuthKey);
             String out = run(120, up.toArray(new String[0]));
-            Log.i(TAG, "tailscale up: " + out.replace(cfg.tailscaleAuthKey.isEmpty() ? "\u0000" : cfg.tailscaleAuthKey, "***"));
+            if (!cfg.tailscaleAuthKey.isEmpty()) out = out.replace(cfg.tailscaleAuthKey, "***");
+            Log.i(TAG, "tailscale up: " + (out.isEmpty() ? "ok" : out));
             refreshState();
         } catch (Exception e) {
             state = "error: " + Byd.describe(e);
             Log.w(TAG, "start failed", e);
+        }
+    }
+
+    /** Last lines of tailscaled's own log, for the status screen. */
+    static String logTail(int lines) {
+        try {
+            List<String> all = java.nio.file.Files.readAllLines(new File(Paths.TS_LOG).toPath());
+            return String.join(" | ", all.subList(Math.max(0, all.size() - lines), all.size()));
+        } catch (Exception e) {
+            return "(no tailscaled log)";
         }
     }
 
@@ -98,7 +119,12 @@ final class TailscaleRunner {
     private void refreshState() {
         try {
             String json = run(15, Paths.TS_CLI_LINK, "--socket=" + Paths.TS_SOCKET, "status", "--json");
-            JSONObject o = new JSONObject(json.substring(Math.max(0, json.indexOf('{'))));
+            if (json.indexOf('{') < 0) {
+                state = "error: " + (json.isEmpty() ? "no answer from tailscaled" : json)
+                        + (daemon != null && !daemon.isAlive() ? " (tailscaled not running: " + logTail(3) + ")" : "");
+                return;
+            }
+            JSONObject o = new JSONObject(json.substring(json.indexOf('{')));
             String backend = o.optString("BackendState", "unknown");
             JSONObject self = o.optJSONObject("Self");
             String ip = "";
