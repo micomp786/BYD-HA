@@ -45,6 +45,10 @@ final class Sensors {
         l.add(s("total_fuel_l", "Fuel used (lifetime)", "volume", T, "L", "mdi:gas-station"));
         l.add(s("avg_elec_kwh_100km", "Avg electricity use", null, M, "kWh/100km", "mdi:chart-line"));
         l.add(s("avg_fuel_l_100km", "Avg fuel use", null, M, "L/100km", "mdi:chart-line"));
+        // Current trip
+        l.add(s("trip_km", "Trip distance", "distance", M, "km", "mdi:map-marker-path"));
+        l.add(s("trip_hours", "Trip time", "duration", M, "h", "mdi:timer-outline"));
+        l.add(s("last50_elec_kwh_100km", "Electricity use, last 50 km", null, M, "kWh/100km", "mdi:chart-line"));
         // Driving
         l.add(s("speed_kmh", "Speed", "speed", M, "km/h", "mdi:speedometer"));
         l.add(s("gear", "Gear", "enum", null, null, "mdi:car-shift-pattern"));

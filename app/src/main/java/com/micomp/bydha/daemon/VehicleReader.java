@@ -91,6 +91,14 @@ final class VehicleReader {
         Double avgFuel = num(byd.get(Byd.STATISTIC, "getTotalFuelConPHMValue"));
         s.put("avg_fuel_l_100km", in(avgFuel, 0.1, 50) ? round(avgFuel, 1) : null);
 
+        // ---------- Current trip (instrument cluster) ----------
+        Double tripKm = num(byd.get(Byd.INSTRUMENT, "getCurrentJourneyDriveMileage"));
+        s.put("trip_km", in(tripKm, 0, 10_000) ? round(tripKm, 1) : null);
+        Double tripH = num(byd.get(Byd.INSTRUMENT, "getCurrentJourneyDriveTime"));
+        s.put("trip_hours", in(tripH, 0, 500) ? round(tripH, 1) : null);
+        Double last50 = num(byd.get(Byd.INSTRUMENT, "getLast50KmPowerConsume"));
+        s.put("last50_elec_kwh_100km", in(last50, 0.1, 100) ? round(last50, 1) : null);
+
         // ---------- Driving ----------
         Double speed = num(byd.get(Byd.SPEED, "getCurrentSpeed"));
         s.put("speed_kmh", in(speed, 0, 300) ? round(speed, 1) : null);
