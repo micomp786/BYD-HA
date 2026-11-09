@@ -57,10 +57,25 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "dist/BYD-HA-0.1.${{ github.run_number }}.apk"
           ls -la dist
 
+      # Artifact storage is shared across the account and can run out; the APK is also
+      # published as a release below, so a full quota must not fail the build.
       - uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: BYD-HA-apk
           path: dist/*.apk
+          retention-days: 3
+
+      - name: Publish a test release for this PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: pr-${{ github.event.pull_request.number }}
+        run: |
+          gh release delete "$TAG" --yes --cleanup-tag || true
+          gh release create "$TAG" dist/*.apk --target "${{ github.event.pull_request.head.sha }}" --prerelease \
+            --title "Test build for PR #${{ github.event.pull_request.number }} (0.1.${{ github.run_number }})" \
+            --notes "Built from ${{ github.event.pull_request.head.sha }}. For testing before the PR is merged."
 
       - name: Publish as the "latest" release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
