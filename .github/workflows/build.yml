@@ -1,0 +1,73 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TS_VERSION: v1.96.4
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore Tailscale binary
+        id: ts-cache
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jniLibs/arm64-v8a/libtailscale.so
+          key: tailscale-${{ env.TS_VERSION }}-android-arm64-${{ hashFiles('tools/build-tailscale.sh') }}
+
+      - name: Fetch Tailscale source
+        if: steps.ts-cache.outputs.cache-hit != 'true'
+        run: git clone --depth 1 --branch "$TS_VERSION" https://github.com/tailscale/tailscale.git "$RUNNER_TEMP/tailscale"
+
+      - uses: actions/setup-go@v5
+        if: steps.ts-cache.outputs.cache-hit != 'true'
+        with:
+          go-version-file: ${{ runner.temp }}/tailscale/go.mod
+          cache: false
+
+      - name: Build Tailscale for the head unit
+        if: steps.ts-cache.outputs.cache-hit != 'true'
+        run: WORK="$RUNNER_TEMP" tools/build-tailscale.sh
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Name the APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/BYD-HA-0.1.${{ github.run_number }}.apk"
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BYD-HA-apk
+          path: dist/*.apk
+
+      - name: Publish as the "latest" release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest dist/*.apk --target "$GITHUB_SHA" --prerelease \
+            --title "Latest build (0.1.${{ github.run_number }})" \
+            --notes "Built automatically from ${GITHUB_SHA::7}. Download the APK below and install it on the head unit."
