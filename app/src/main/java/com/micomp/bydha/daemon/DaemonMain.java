@@ -36,6 +36,7 @@ public final class DaemonMain {
 
     private final Config cfg;
     private final long configStamp;
+    private long apkStamp;
     private final Context ctx;
     private final String version;
     private final Byd byd;
@@ -73,6 +74,7 @@ public final class DaemonMain {
         } catch (Exception ignored) {
         }
         version = v;
+        apkStamp = apkUpdateTime();
         byd = new Byd(ctx);
         reader = new VehicleReader(byd, ctx);
         mqtt = new MqttLink(cfg, version, this::onCommand);
@@ -124,6 +126,14 @@ public final class DaemonMain {
 
     private void tick() throws Exception {
         File cf = new File(Paths.CONFIG);
+        long apk = apkUpdateTime();
+        if (apk != 0 && apkStamp != 0 && apk != apkStamp) {
+            // The app was updated: exit so the watchdog starts the new code.
+            Log.i(TAG, "app updated, restarting");
+            mqtt.close();
+            if (tailscale != null) tailscale.stop();
+            System.exit(0);
+        }
         if (cf.lastModified() != configStamp) {
             Log.i(TAG, "config changed, restarting");
             mqtt.close();
@@ -194,6 +204,14 @@ public final class DaemonMain {
             writeFile(Paths.STATUS, s.toString(1));
         } catch (Exception e) {
             Log.w(TAG, "status write failed", e);
+        }
+    }
+
+    private long apkUpdateTime() {
+        try {
+            return ctx.getPackageManager().getPackageInfo(Paths.PACKAGE, 0).lastUpdateTime;
+        } catch (Exception e) {
+            return 0;
         }
     }
 

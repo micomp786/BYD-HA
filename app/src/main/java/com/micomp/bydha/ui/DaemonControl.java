@@ -91,7 +91,8 @@ final class DaemonControl {
 
     static String status(Context c) throws Exception {
         try (Dadb adb = connect(c)) {
-            String alive = sh(adb, "pidof " + Paths.PROCESS_NAME + " >/dev/null 2>&1 && echo running || echo 'not running'");
+            String alive = sh(adb, "(ps -A 2>/dev/null || ps) | grep -v grep | grep -q " + Paths.PROCESS_NAME
+                    + " && echo running || echo 'not running'");
             String s = sh(adb, "cat " + Paths.STATUS + " 2>/dev/null");
             return "Service: " + alive + "\n\n" + (s.isEmpty() ? "(no status yet)" : s);
         }
