@@ -86,6 +86,7 @@ final class MqttLink implements MqttCallbackExtended {
         o.setKeepAliveInterval(60);
         o.setConnectionTimeout(20);
         o.setMaxReconnectDelay(120);
+        o.setMaxInflight(200);
         if (!cfg.username.isEmpty()) {
             o.setUserName(cfg.username);
             o.setPassword(cfg.password.toCharArray());
@@ -108,13 +109,18 @@ final class MqttLink implements MqttCallbackExtended {
         state = "connected";
         Log.i(TAG, (reconnect ? "reconnected" : "connected") + " to " + serverURI);
         try {
-            publish(cfg.topic("availability"), "online", true);
-            sendDiscovery();
             client.subscribe(cfg.topic("cmd"), 1);
             client.subscribe(cfg.discoveryPrefix + "/status", 1);
         } catch (Exception e) {
-            Log.w(TAG, "post-connect setup failed", e);
+            Log.w(TAG, "subscribe failed", e);
         }
+        // Publish from a worker thread so the Paho callback thread stays free.
+        Thread t = new Thread(() -> {
+            publish(cfg.topic("availability"), "online", true);
+            sendDiscovery();
+        }, "bydha-discovery");
+        t.setDaemon(true);
+        t.start();
     }
 
     void sendDiscovery() {
@@ -128,16 +134,25 @@ final class MqttLink implements MqttCallbackExtended {
         }
     }
 
-    boolean publish(String topic, String payload, boolean retained) {
-        MqttClient c = client;
-        if (c == null || !c.isConnected()) return false;
-        try {
-            c.publish(topic, payload.getBytes(StandardCharsets.UTF_8), 1, retained);
-            return true;
-        } catch (MqttException e) {
-            Log.w(TAG, "publish " + topic + " failed", e);
-            return false;
+    synchronized boolean publish(String topic, String payload, boolean retained) {
+        byte[] body = payload.getBytes(StandardCharsets.UTF_8);
+        for (int attempt = 0; attempt < 20; attempt++) {
+            MqttClient c = client;
+            if (c == null || !c.isConnected()) return false;
+            try {
+                c.publish(topic, body, 1, retained);
+                return true;
+            } catch (MqttException e) {
+                if (e.getReasonCode() == MqttException.REASON_CODE_MAX_INFLIGHT) {
+                    try { Thread.sleep(250); } catch (InterruptedException ie) { return false; }
+                    continue;
+                }
+                Log.w(TAG, "publish " + topic + " failed", e);
+                return false;
+            }
         }
+        Log.w(TAG, "publish " + topic + " gave up: broker not acknowledging");
+        return false;
     }
 
     @Override

@@ -44,6 +44,7 @@ public final class MainActivity extends Activity {
         root.setPadding(pad, pad, pad, pad);
 
         heading("BYD → Home Assistant");
+        note("Version " + appVersion());
         note("Sends your car's data to Home Assistant over MQTT. Needs Wireless ADB turned on in "
                 + "the head unit's developer settings. The first time you press Save & start, "
                 + "tap Allow (and tick \"Always allow\") on the ADB prompt.");
@@ -162,6 +163,15 @@ public final class MainActivity extends Activity {
     }
 
     // ---------- tiny view helpers ----------
+
+    private String appVersion() {
+        try {
+            android.content.pm.PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return pi.versionName + " (build " + pi.versionCode + ")";
+        } catch (Exception e) {
+            return "unknown";
+        }
+    }
 
     private int dp(int v) {
         return Math.round(v * getResources().getDisplayMetrics().density);
