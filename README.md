@@ -17,7 +17,13 @@ A device called **BYD Seal U DM-i** appears by itself (MQTT discovery, no YAML),
 | Distance | Odometer, lifetime EV km, lifetime hybrid km, lifetime kWh and litres used, average kWh/100 km and L/100 km |
 | Driving | Speed, gear, outside temperature |
 | Tyres | Pressure for each wheel (kPa) |
-| Other | 12 V battery voltage, location (device tracker), Tailscale status, last update |
+| Trip | Trip distance and time, electricity use over the last 50 km |
+| Drive | Drive mode (EV/HEV), energy mode, engine running, average speed, lifetime driving time |
+| Car status | A/C on/off and fan level, sunroof position, driver door lock, handbrake (raw), sunroof state (raw) |
+| Warnings | Low fuel, low 12 V, and the engine, ABS, ESP, airbag, brake, traction battery and steering fault lights |
+| Other | 12 V battery voltage, phone charger (raw), scheduled charging, location (device tracker), Tailscale status, last update |
+
+Sensors marked "raw" show the car's own number until its meaning is confirmed.
 | Diagnostics | A **Send debug dump** button (see below) |
 
 It only reads data. It cannot control the car.

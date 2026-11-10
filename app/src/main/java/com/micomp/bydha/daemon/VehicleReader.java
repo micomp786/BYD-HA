@@ -131,11 +131,85 @@ final class VehicleReader {
             s.put("tyre_" + wheels[i] + "_kpa", in(p, 50, 500) ? (long) Math.round(p) : null);
         }
 
+        readExtras(s);
+
         // ---------- 12 V ----------
         Double v12 = num(byd.get(Byd.OTA, "getBatteryPowerVoltage"));
         s.put("volt_12v", in(v12, 0.1, 20) ? round(v12, 2) : null);
 
         return s;
+    }
+
+    private static final String[] ENERGY_MODES = {"stop", "ev", "force_ev", "hev", "fuel", "keep"};
+
+    /**
+     * Fault and warning lights, with the value each one showed on a healthy Seal U DM-i in the
+     * first debug dump. The firmware does not document these encodings and they differ per lamp,
+     * so a light counts as "on" when it reports anything other than its healthy value or 0.
+     */
+    private static final Object[][] WARNINGS = {
+            {"warn_low_fuel", "getLowFuelWarnLightState", 1},
+            {"warn_low_12v", "getLowPowerBatteryWarnLightState", 1},
+            {"warn_engine", "getEngineFailWarnLightState", 2},
+            {"warn_abs", "getABSFaultWarningLight", 2},
+            {"warn_esp", "getESPFailWarnLightState", 2},
+            {"warn_airbag", "getSRSFaultWarningLight", 2},
+            {"warn_brake", "getBrakeSysFaultLightState", 2},
+            {"warn_traction_battery", "getPowerBatFailWarnLightState", 2},
+            {"warn_steering", "getSteeringSYSFailWarnLightState", 2},
+    };
+
+    private void readExtras(Map<String, Object> s) {
+        // Energy / drive mode
+        Double em = num(byd.get(Byd.ENERGY, "getEnergyMode"));
+        s.put("energy_mode", em != null && em >= 0 && em < ENERGY_MODES.length ? ENERGY_MODES[em.intValue()] : null);
+        Double evLamp = num(byd.get(Byd.INSTRUMENT, "getEVIndicatorState"));
+        Double hevLamp = num(byd.get(Byd.INSTRUMENT, "getHEVIndicatorState"));
+        String drive = null;
+        if (evLamp != null && evLamp == 1) drive = "EV";
+        else if (hevLamp != null && hevLamp == 1) drive = "HEV";
+        s.put("drive_mode", drive);
+        Object rpm = s.get("engine_rpm");
+        s.put("engine_running", rpm == null ? null : (((Long) rpm) > 0 ? "ON" : "OFF"));
+
+        Double avgSpeed = num(byd.get(Byd.INSTRUMENT, "getAverageSpeed"));
+        s.put("avg_speed_kmh", in(avgSpeed, 0, 300) ? (long) Math.round(avgSpeed) : null);
+        Double drivingH = num(byd.get(Byd.STATISTIC, "getDrivingTimeValue"));
+        s.put("driving_time_h", in(drivingH, 0, 1_000_000) ? round(drivingH, 1) : null);
+
+        // Climate
+        Double ac = num(byd.get(Byd.AC, "getAcStartState"));
+        s.put("ac_on", ac == null || (ac != 0 && ac != 1) ? null : (ac == 1 ? "ON" : "OFF"));
+        Double fan = num(byd.get(Byd.AC, "getAcWindLevel"));
+        s.put("ac_fan_level", in(fan, 0, 10) ? (long) Math.round(fan) : null);
+
+        // Body
+        Double roofPos = num(byd.get(Byd.BODYWORK, "getSunroofPosition"));
+        s.put("sunroof_position", in(roofPos, 0, 100) ? (long) Math.round(roofPos) : null);
+        s.put("sunroof_state_raw", rawInt(byd.get(Byd.BODYWORK, "getSunroofState")));
+        s.put("handbrake_raw", rawInt(byd.get(Byd.GEARBOX, "getEPBState")));
+        // OTA device driver-door lock: 1 = unlocked, 2 = locked (Overdrive DOOR_STATE_*).
+        Double lock = num(byd.get(Byd.OTA, "getLFDoorLockState"));
+        s.put("door_unlocked", lock == null || (lock != 1 && lock != 2) ? null : (lock == 1 ? "ON" : "OFF"));
+
+        // Warning lights
+        for (Object[] w : WARNINGS) {
+            Long v = rawInt(byd.get(Byd.INSTRUMENT, (String) w[1]));
+            int healthy = (Integer) w[2];
+            s.put((String) w[0], v == null ? null : (v == 0 || v == healthy ? "OFF" : "ON"));
+        }
+
+        // Other
+        s.put("wireless_charger_raw", rawInt(byd.get(Byd.CHARGING, "getWirelessChargingState")));
+        Double sched = num(byd.get(Byd.CHARGING, "getChargingScheduleEnableState"));
+        s.put("scheduled_charging", sched == null || (sched != 0 && sched != 1) ? null : (sched == 1 ? "ON" : "OFF"));
+    }
+
+    /** Raw enum value, with the HAL's "no value" encodings (incl. 65535) dropped. */
+    private static Long rawInt(Object o) {
+        Double d = num(o);
+        if (d == null || d == 65535 || d < 0) return null;
+        return (long) Math.round(d);
     }
 
     private Long mileage(Object getter, int featureId) {

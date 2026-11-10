@@ -58,6 +58,32 @@ final class Sensors {
         l.add(s("tyre_fr_kpa", "Tyre pressure front right", "pressure", M, "kPa", "mdi:car-tire-alert"));
         l.add(s("tyre_rl_kpa", "Tyre pressure rear left", "pressure", M, "kPa", "mdi:car-tire-alert"));
         l.add(s("tyre_rr_kpa", "Tyre pressure rear right", "pressure", M, "kPa", "mdi:car-tire-alert"));
+        // Drive / energy
+        l.add(s("drive_mode", "Drive mode", null, null, null, "mdi:car-electric"));
+        l.add(s("energy_mode", "Energy mode", null, null, null, "mdi:leaf"));
+        l.add(b("engine_running", "Engine running", "running", "mdi:engine"));
+        l.add(s("avg_speed_kmh", "Average speed", "speed", M, "km/h", "mdi:speedometer-medium"));
+        l.add(s("driving_time_h", "Driving time (lifetime)", "duration", T, "h", "mdi:timer"));
+        // Climate and body
+        l.add(b("ac_on", "A/C", "running", "mdi:air-conditioner"));
+        l.add(s("ac_fan_level", "A/C fan level", null, M, null, "mdi:fan"));
+        l.add(s("sunroof_position", "Sunroof position", null, M, "%", "mdi:window-shutter"));
+        l.add(s("sunroof_state_raw", "Sunroof state (raw)", null, null, null, "mdi:window-shutter"));
+        l.add(s("handbrake_raw", "Handbrake state (raw)", null, null, null, "mdi:car-brake-parking"));
+        l.add(b("door_unlocked", "Driver door lock", "lock", "mdi:car-door-lock"));
+        // Warning lights
+        l.add(b("warn_low_fuel", "Low fuel warning", "problem", "mdi:gas-station-off"));
+        l.add(b("warn_low_12v", "Low 12V battery warning", "problem", "mdi:car-battery"));
+        l.add(b("warn_engine", "Engine fault light", "problem", "mdi:engine-off"));
+        l.add(b("warn_abs", "ABS fault light", "problem", "mdi:car-brake-abs"));
+        l.add(b("warn_esp", "ESP fault light", "problem", "mdi:car-traction-control"));
+        l.add(b("warn_airbag", "Airbag fault light", "problem", "mdi:airbag"));
+        l.add(b("warn_brake", "Brake system fault light", "problem", "mdi:car-brake-alert"));
+        l.add(b("warn_traction_battery", "Traction battery fault light", "problem", "mdi:battery-alert"));
+        l.add(b("warn_steering", "Steering fault light", "problem", "mdi:steering"));
+        // Other
+        l.add(s("wireless_charger_raw", "Phone charger state (raw)", null, null, null, "mdi:cellphone-wireless"));
+        l.add(b("scheduled_charging", "Scheduled charging", null, "mdi:calendar-clock"));
         // 12 V
         l.add(s("volt_12v", "12V battery", "voltage", M, "V", "mdi:car-battery"));
         // Diagnostics
