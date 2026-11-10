@@ -12,7 +12,7 @@ A device called **BYD Seal U DM-i** appears by itself (MQTT discovery, no YAML),
 
 | Area | Entities |
 |---|---|
-| Battery | Battery %, EV range, charging power, charge plug (none/AC/DC/V2L), charging, plugged in |
+| Battery | Battery %, battery energy (estimate from % and battery size), EV range, charging power, charge plug (none/AC/DC/V2L), charging, plugged in |
 | Fuel | Fuel level %, fuel range, total range, engine speed |
 | Distance | Odometer, lifetime EV km, lifetime hybrid km, lifetime kWh and litres used, average kWh/100 km and L/100 km |
 | Driving | Speed, gear, outside temperature |

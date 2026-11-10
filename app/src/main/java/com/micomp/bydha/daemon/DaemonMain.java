@@ -76,7 +76,7 @@ public final class DaemonMain {
         version = v;
         apkStamp = apkUpdateTime();
         byd = new Byd(ctx);
-        reader = new VehicleReader(byd, ctx);
+        reader = new VehicleReader(byd, ctx, cfg.batteryKwh);
         mqtt = new MqttLink(cfg, version, this::onCommand);
         tailscale = cfg.tailscaleEnabled ? new TailscaleRunner(ctx, cfg) : null;
         Log.i(TAG, "version " + version + ", broker " + cfg.brokerHost + ":" + cfg.brokerPort

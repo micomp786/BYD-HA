@@ -36,9 +36,12 @@ final class VehicleReader {
     private final Context ctx;
     private Map<String, Object> lastLocation;
 
-    VehicleReader(Byd byd, Context ctx) {
+    private final double batteryKwh;
+
+    VehicleReader(Byd byd, Context ctx, double batteryKwh) {
         this.byd = byd;
         this.ctx = ctx;
+        this.batteryKwh = batteryKwh;
     }
 
     Map<String, Object> read() {
@@ -48,6 +51,9 @@ final class VehicleReader {
         Double soc = num(byd.get(Byd.STATISTIC, "getElecPercentageValue"));
         if (!in(soc, 0.1, 100)) soc = intToD(byd.managerInt(Byd.STATISTIC, STAT_ELEC_PERCENTAGE));
         s.put("soc", in(soc, 0.1, 100) ? round(soc, 1) : null);
+        // The car's own remaining-energy register mirrors SOC on this firmware (868 at 87 %),
+        // so estimate from SOC and the configured battery size instead.
+        s.put("battery_kwh", in(soc, 0.1, 100) && batteryKwh > 0 ? round(soc / 100.0 * batteryKwh, 1) : null);
 
         Double evRange = num(byd.get(Byd.STATISTIC, "getElecDrivingRangeValue"));
         if (!in(evRange, 0, 2000)) evRange = intToD(byd.managerInt(Byd.STATISTIC, STAT_ELEC_DRIVING_RANGE));

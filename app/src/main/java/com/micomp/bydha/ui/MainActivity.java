@@ -30,7 +30,7 @@ public final class MainActivity extends Activity {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final Handler ui = new Handler(Looper.getMainLooper());
 
-    private EditText host, port, user, pass, name, poll, tsKey, tsHost;
+    private EditText host, port, user, pass, name, poll, battery, tsKey, tsHost;
     private CheckBox tls, tlsInsecure, tsOn;
     private TextView output;
     private LinearLayout root;
@@ -64,6 +64,8 @@ public final class MainActivity extends Activity {
         heading("Car");
         name = field("Name in Home Assistant", InputType.TYPE_CLASS_TEXT);
         poll = field("Update every N seconds", InputType.TYPE_CLASS_NUMBER);
+        battery = field("Battery size in kWh (Seal U DM-i: 18.3)",
+                InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
 
         LinearLayout row1 = row();
         button(row1, "Save & start", v -> {
@@ -125,6 +127,7 @@ public final class MainActivity extends Activity {
         tsHost.setText(c.tailscaleHostname);
         name.setText(c.vehicleName);
         poll.setText(String.valueOf(c.pollSeconds));
+        battery.setText(String.valueOf(c.batteryKwh));
     }
 
     private Config readForm() {
@@ -142,6 +145,11 @@ public final class MainActivity extends Activity {
         c.vehicleName = name.getText().toString().trim().isEmpty()
                 ? "BYD Seal U DM-i" : name.getText().toString().trim();
         c.pollSeconds = Math.max(5, parseInt(poll, 30));
+        try {
+            c.batteryKwh = Double.parseDouble(battery.getText().toString().trim().replace(',', '.'));
+        } catch (NumberFormatException ignored) {
+            c.batteryKwh = 18.3;
+        }
         return c;
     }
 

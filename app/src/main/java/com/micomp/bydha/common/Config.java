@@ -18,6 +18,8 @@ public final class Config {
     public String baseTopic = "bydha";
     public String discoveryPrefix = "homeassistant";
     public int pollSeconds = 30;
+    /** Usable traction battery size, for the remaining-energy estimate (Seal U DM-i: 18.3). */
+    public double batteryKwh = 18.3;
 
     public boolean tailscaleEnabled = false;
     public String tailscaleAuthKey = "";
@@ -37,6 +39,7 @@ public final class Config {
             o.put("baseTopic", baseTopic);
             o.put("discoveryPrefix", discoveryPrefix);
             o.put("pollSeconds", pollSeconds);
+            o.put("batteryKwh", batteryKwh);
             o.put("tailscaleEnabled", tailscaleEnabled);
             o.put("tailscaleAuthKey", tailscaleAuthKey);
             o.put("tailscaleHostname", tailscaleHostname);
@@ -62,6 +65,7 @@ public final class Config {
             c.baseTopic = o.optString("baseTopic", c.baseTopic).trim();
             c.discoveryPrefix = o.optString("discoveryPrefix", c.discoveryPrefix).trim();
             c.pollSeconds = Math.max(5, Math.min(3600, o.optInt("pollSeconds", c.pollSeconds)));
+            c.batteryKwh = Math.max(0, Math.min(200, o.optDouble("batteryKwh", c.batteryKwh)));
             c.tailscaleEnabled = o.optBoolean("tailscaleEnabled", c.tailscaleEnabled);
             c.tailscaleAuthKey = o.optString("tailscaleAuthKey", c.tailscaleAuthKey).trim();
             c.tailscaleHostname = o.optString("tailscaleHostname", c.tailscaleHostname).trim();

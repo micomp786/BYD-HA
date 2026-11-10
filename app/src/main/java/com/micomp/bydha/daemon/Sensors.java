@@ -27,6 +27,7 @@ final class Sensors {
         List<Def> l = new ArrayList<>();
         // Battery (plug-in hybrid traction battery)
         l.add(s("soc", "Battery", "battery", M, "%", "mdi:battery"));
+        l.add(s("battery_kwh", "Battery energy (estimate)", "energy_storage", M, "kWh", "mdi:battery-high"));
         l.add(s("ev_range_km", "EV range", "distance", M, "km", "mdi:map-marker-distance"));
         l.add(s("charge_power_kw", "Charging power", "power", M, "kW", "mdi:ev-station"));
         l.add(s("charging_gun", "Charge plug", "enum", null, null, "mdi:power-plug"));
