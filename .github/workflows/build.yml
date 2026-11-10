@@ -23,7 +23,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: app/src/main/jniLibs/arm64-v8a/libtailscale.so
-          key: tailscale-${{ env.TS_VERSION }}-android-arm64-${{ hashFiles('tools/build-tailscale.sh') }}
+          key: tailscale-${{ env.TS_VERSION }}-android-arm64-${{ hashFiles('tools/build-tailscale.sh', 'tools/patches/**') }}
 
       - name: Fetch Tailscale source
         if: steps.ts-cache.outputs.cache-hit != 'true'

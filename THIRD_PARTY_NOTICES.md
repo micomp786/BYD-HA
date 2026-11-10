@@ -31,11 +31,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+Overdrive's `tools/patches/tailscale-tcp-socket.patch` is also used as-is to build Tailscale (it moves the
+local API to loopback TCP); same MIT notice.
+
 ## Bundled and linked components
 
 | Component | Use | License |
 |---|---|---|
-| [Tailscale](https://github.com/tailscale/tailscale) | `libtailscale.so`, built unmodified from upstream source in CI | BSD-3-Clause |
+| [Tailscale](https://github.com/tailscale/tailscale) | `libtailscale.so`, built from upstream source in CI with the patch in `tools/patches` (loopback-TCP local API, ACME resolver fallback) | BSD-3-Clause |
 | [Eclipse Paho MQTT v3](https://github.com/eclipse/paho.mqtt.java) | MQTT client | EPL-2.0 / EDL-1.0 |
 | [dadb](https://github.com/mobile-dev-inc/dadb) | ADB client used to start the background service | Apache-2.0 |
 | Kotlin standard library, Okio (via dadb) | Runtime libraries | Apache-2.0 |

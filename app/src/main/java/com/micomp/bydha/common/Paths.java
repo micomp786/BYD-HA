@@ -17,7 +17,8 @@ public final class Paths {
     public static final String WATCHDOG_PID = BASE + "/watchdog.pid";
     public static final String DISABLED = BASE + "/disabled";
     public static final String TS_DIR = BASE + "/ts";
-    public static final String TS_SOCKET = TS_DIR + "/tailscaled.sock";
+    /** Local API of tailscaled. Loopback TCP (patched build), see tools/patches. */
+    public static final String TS_SOCKET = "127.0.0.1:8533";
     /** Copy of the APK's libtailscale.so; the shell user may not exec inside /data/app. */
     public static final String TS_BINARY = TS_DIR + "/tailscaled";
     public static final String TS_CLI_LINK = TS_DIR + "/tailscale";

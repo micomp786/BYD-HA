@@ -57,7 +57,6 @@ final class TailscaleRunner {
                     + ".new' '" + Paths.TS_BINARY + "'; }; chmod 755 '" + Paths.TS_BINARY + "' && "
                     + "ln -sf '" + Paths.TS_BINARY + "' '" + Paths.TS_CLI_LINK + "' && echo ok");
             if (!copy.endsWith("ok")) throw new IllegalStateException("could not install binary: " + copy);
-            new File(Paths.TS_SOCKET).delete();
 
             state = "starting";
             ProcessBuilder pb = new ProcessBuilder(Paths.TS_BINARY,
@@ -73,7 +72,7 @@ final class TailscaleRunner {
             daemon = pb.start();
             Log.i(TAG, "tailscaled started");
 
-            for (int i = 0; i < 40 && !new File(Paths.TS_SOCKET).exists() && daemon.isAlive(); i++) {
+            for (int i = 0; i < 60 && !localApiUp() && daemon.isAlive(); i++) {
                 Thread.sleep(500);
             }
             if (!daemon.isAlive()) {
@@ -93,6 +92,16 @@ final class TailscaleRunner {
         } catch (Exception e) {
             state = "error: " + Byd.describe(e);
             Log.w(TAG, "start failed", e);
+        }
+    }
+
+    private static boolean localApiUp() {
+        String[] hp = Paths.TS_SOCKET.split(":");
+        try (java.net.Socket sock = new java.net.Socket()) {
+            sock.connect(new java.net.InetSocketAddress(hp[0], Integer.parseInt(hp[1])), 500);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 

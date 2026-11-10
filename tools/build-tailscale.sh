@@ -21,9 +21,15 @@ TAGS+=,ts_omit_debugportmapper,ts_omit_debugeventbus,ts_omit_doctor
 TAGS+=,ts_omit_hujsonconf,ts_omit_identityfederation,ts_omit_oauthkey
 TAGS+=,ts_omit_sdnotify
 
+PATCH="$ROOT/tools/patches/tailscale-tcp-socket.patch"
+
 if [ ! -d "$WORK/tailscale" ]; then
     git clone --depth 1 --branch "$TS_VERSION" https://github.com/tailscale/tailscale.git "$WORK/tailscale"
 fi
+# Overdrive's patch (MIT): lets the local API listen on loopback TCP ("127.0.0.1:port")
+# instead of a unix socket, which the head unit's SELinux policy does not allow the shell
+# user to create in /data/local/tmp.
+git -C "$WORK/tailscale" apply "$PATCH"
 mkdir -p "$(dirname "$OUT")"
 (
     cd "$WORK/tailscale"
