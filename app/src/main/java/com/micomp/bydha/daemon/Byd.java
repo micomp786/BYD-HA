@@ -273,6 +273,27 @@ final class Byd {
                 }
                 out.put(dev + "." + m.getName(), v);
             }
+            // Per-wheel / per-area getters (one int argument), probed with 1..4. This is where
+            // tyre pressures live, and which numbering this firmware uses is not known up front.
+            if (cls.equals(TYRE)) {
+                for (Method m : d.getClass().getMethods()) {
+                    Class<?>[] p = m.getParameterTypes();
+                    if (p.length != 1 || p[0] != int.class || !m.getName().startsWith("get")) continue;
+                    Class<?> rt = m.getReturnType();
+                    if (!(rt.isPrimitive() || rt == String.class) || rt == void.class) continue;
+                    for (int arg = 0; arg <= 4; arg++) {
+                        final int a = arg;
+                        Object v;
+                        try {
+                            v = bounded(m.getName() + "(" + a + ")", () -> m.invoke(d, a));
+                            if (v == null) v = "null/timeout";
+                        } catch (CallFailed e) {
+                            v = "ERR " + describe(e.getCause());
+                        }
+                        out.put(dev + "." + m.getName() + "(" + a + ")", v);
+                    }
+                }
+            }
         }
         return out;
     }

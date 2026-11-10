@@ -127,6 +127,7 @@ final class VehicleReader {
         String[] wheels = {"fl", "fr", "rl", "rr"};
         for (int i = 0; i < 4; i++) {
             Double p = num(byd.get(Byd.TYRE, "getTyrePressureValue", i + 1));
+            if (!in(p, 50, 500)) p = num(byd.get(Byd.TYRE, "getTyrePressureValueByType", i + 1));
             s.put("tyre_" + wheels[i] + "_kpa", in(p, 50, 500) ? (long) Math.round(p) : null);
         }
 
