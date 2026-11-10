@@ -117,9 +117,16 @@ final class VehicleReader {
         Double gun = num(byd.get(Byd.CHARGING, "getChargingGunState"));
         String gunName = gun != null && gun >= 1 && gun < GUNS.length ? GUNS[gun.intValue()] : null;
         s.put("charging_gun", gunName);
-        Double power = num(byd.get(Byd.CHARGING, "getChargingPower"));
-        if (!in(power, 0, 500)) power = num(byd.get(Byd.CHARGING, "getChargePower"));
-        Double powerKw = in(power, 0, 500) ? round(power, 2) : null;
+        // On the Seal U DM-i Charging.getChargingPower stays 0 while AC charging; the cluster's
+        // Instrument.getChargePower carries the real figure. Take the largest valid reading.
+        Double powerKw = null;
+        for (Object[] src : new Object[][]{
+                {Byd.INSTRUMENT, "getChargePower"},
+                {Byd.CHARGING, "getChargingPower"},
+                {Byd.CHARGING, "getChargePower"}}) {
+            Double v = num(byd.get((String) src[0], (String) src[1]));
+            if (in(v, 0, 400) && (powerKw == null || v > powerKw)) powerKw = round(v, 2);
+        }
         s.put("charge_power_kw", powerKw);
         boolean plugged = gunName != null && !"none".equals(gunName) && !"v2l".equals(gunName);
         s.put("plugged_in", gunName == null ? null : (plugged ? "ON" : "OFF"));
