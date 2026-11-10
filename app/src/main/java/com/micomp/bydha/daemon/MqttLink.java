@@ -151,7 +151,7 @@ final class MqttLink implements MqttCallbackExtended {
                 return false;
             }
         }
-        Log.w(TAG, "publish " + topic + " gave up: broker not acknowledging");
+        Log.i(TAG, "publish " + topic + " gave up: broker not acknowledging");
         return false;
     }
 
