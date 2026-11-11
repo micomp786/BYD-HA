@@ -80,15 +80,10 @@ final class TailscaleRunner {
                         + ": " + logTail(3));
             }
 
-            List<String> up = new ArrayList<>(Arrays.asList(Paths.TS_CLI_LINK,
-                    "--socket=" + Paths.TS_SOCKET, "up", "--reset",
-                    "--hostname=" + cfg.tailscaleHostname,
-                    "--accept-dns=false", "--accept-routes=false", "--timeout=90s"));
-            if (!cfg.tailscaleAuthKey.isEmpty()) up.add("--auth-key=" + cfg.tailscaleAuthKey);
-            String out = run(120, up.toArray(new String[0]));
-            if (!cfg.tailscaleAuthKey.isEmpty()) out = out.replace(cfg.tailscaleAuthKey, "***");
-            Log.i(TAG, "tailscale up: " + (out.isEmpty() ? "ok" : out));
+            Log.i(TAG, "local API " + (localApiUp() ? "up" : "not answering yet") + ", logging in");
+            up();
             refreshState();
+            Log.i(TAG, "state: " + state);
         } catch (Exception e) {
             state = "error: " + Byd.describe(e);
             Log.w(TAG, "start failed", e);
@@ -115,14 +110,44 @@ final class TailscaleRunner {
         }
     }
 
-    /** Restarts tailscaled if it died, and updates {@link #state()}. */
+    private long lastUpAt;
+
+    /**
+     * Restarts tailscaled if it died, logs in again if it is not running (for example when the
+     * car woke up before mobile data was ready), and updates {@link #state()}.
+     */
     synchronized void check() {
         if (daemon != null && !daemon.isAlive()) {
             Log.i(TAG, "tailscaled exited (" + daemon.exitValue() + "), restarting");
             start();
             return;
         }
+        String before = state;
         refreshState();
+        if (!state.equals(before)) Log.i(TAG, "state: " + state);
+        if (daemon != null && !state.startsWith("running")
+                && System.currentTimeMillis() - lastUpAt > 120_000) {
+            Log.i(TAG, "not running, retrying tailscale up");
+            up();
+            refreshState();
+            Log.i(TAG, "state: " + state);
+        }
+    }
+
+    private void up() {
+        lastUpAt = System.currentTimeMillis();
+        try {
+            List<String> up = new ArrayList<>(Arrays.asList(Paths.TS_CLI_LINK,
+                    "--socket=" + Paths.TS_SOCKET, "up", "--reset",
+                    "--hostname=" + cfg.tailscaleHostname,
+                    "--accept-dns=false", "--accept-routes=false", "--timeout=90s"));
+            if (!cfg.tailscaleAuthKey.isEmpty()) up.add("--auth-key=" + cfg.tailscaleAuthKey);
+            String out = run(120, up.toArray(new String[0]));
+            if (!cfg.tailscaleAuthKey.isEmpty()) out = out.replace(cfg.tailscaleAuthKey, "***");
+            Log.i(TAG, "tailscale up: " + (out.isEmpty() ? "ok" : out));
+        } catch (Exception e) {
+            Log.i(TAG, "tailscale up failed: " + Byd.describe(e));
+        }
     }
 
     private void refreshState() {

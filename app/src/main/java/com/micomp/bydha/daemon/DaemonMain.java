@@ -51,6 +51,7 @@ public final class DaemonMain {
     private long lastLocationAt;
     private Map<String, Object> lastState;
     private String lastError = "";
+    private boolean lastConnected;
 
     public static void main(String[] args) {
         Log.i(TAG, "starting, uid=" + android.os.Process.myUid());
@@ -84,7 +85,7 @@ public final class DaemonMain {
     }
 
     private void run() {
-        ScheduledExecutorService sched = Executors.newScheduledThreadPool(2);
+        ScheduledExecutorService sched = Executors.newScheduledThreadPool(4);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             mqtt.close();
@@ -151,7 +152,12 @@ public final class DaemonMain {
         }
         String payload = json.toString();
         long now = System.currentTimeMillis();
-        if (mqtt.isConnected() && (!payload.equals(lastPayload) || now - lastPublishAt > HEARTBEAT_MS)) {
+        boolean connected = mqtt.isConnected();
+        if (connected != lastConnected) {
+            Log.i(TAG, connected ? "MQTT link up, publishing" : "MQTT link down: " + mqtt.state());
+            lastConnected = connected;
+        }
+        if (connected && (!payload.equals(lastPayload) || now - lastPublishAt > HEARTBEAT_MS)) {
             json.put("last_update", iso(now));
             if (mqtt.publish(cfg.topic("state"), json.toString(), true)) {
                 lastPayload = payload;

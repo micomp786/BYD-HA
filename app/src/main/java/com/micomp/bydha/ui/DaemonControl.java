@@ -100,8 +100,10 @@ final class DaemonControl {
 
     static String log(Context c) throws Exception {
         try (Dadb adb = connect(c)) {
-            return sh(adb, "tail -n 150 " + Paths.LOG + " 2>/dev/null; echo; echo '--- tailscaled ---'; "
-                    + "tail -n 30 " + Paths.TS_DIR + "/tailscaled.log 2>/dev/null");
+            // Newest lines first, so the latest events are at the top of the screen.
+            return sh(adb, "echo '--- newest first ---'; tail -n 150 " + Paths.LOG
+                    + " 2>/dev/null | sed '1!G;h;$!d'; echo; echo '--- tailscaled, newest first ---'; "
+                    + "tail -n 30 " + Paths.TS_DIR + "/tailscaled.log 2>/dev/null | sed '1!G;h;$!d'");
         }
     }
 
