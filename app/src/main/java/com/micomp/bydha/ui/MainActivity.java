@@ -38,6 +38,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        if (Settings.enabled(this)) KeepAliveJob.schedule(this);
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(16);
@@ -73,6 +74,7 @@ public final class MainActivity extends Activity {
             Config c = readForm();
             Settings.save(this, c);
             Settings.setEnabled(this, true);
+            KeepAliveJob.schedule(this);
             runJob("Connecting to ADB… if a prompt appears, tap Allow.", () -> DaemonControl.start(this, c));
         });
         button(row1, "Stop", v -> {

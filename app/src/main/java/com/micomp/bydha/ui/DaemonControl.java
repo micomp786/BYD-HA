@@ -59,14 +59,36 @@ final class DaemonControl {
 
     /** Writes the config and (re)starts the watchdog + daemon. Returns a short report. */
     static String start(Context c, Config cfg) throws Exception {
+        return start(c, cfg, "Save & start");
+    }
+
+    private static final String WATCHDOG_ALIVE = "P=$(cat " + Paths.WATCHDOG_PID + " 2>/dev/null); "
+            + "[ -n \"$P\" ] && grep -q watchdog /proc/$P/cmdline 2>/dev/null && echo yes || echo no";
+
+    /**
+     * Starts the service only if it is not already running, without touching a running one.
+     * Used after boot and by the periodic keep-alive check.
+     */
+    static String ensureRunning(Context c, Config cfg, String reason) throws Exception {
         try (Dadb adb = connect(c)) {
+            if (sh(adb, "[ -f " + Paths.DISABLED + " ] && echo off || echo on").endsWith("off")) {
+                return "Service is switched off.";
+            }
+            if (sh(adb, WATCHDOG_ALIVE).endsWith("yes")) return "Already running.";
+        }
+        return start(c, cfg, reason);
+    }
+
+    static String start(Context c, Config cfg, String reason) throws Exception {
+        try (Dadb adb = connect(c)) {
+            sh(adb, "mkdir -p " + Paths.BASE + " && echo \"$(date) app: start requested (" + reason
+                    + ")\" >> " + Paths.LOG);
             sh(adb, "mkdir -p " + Paths.TS_DIR + " && rm -f " + Paths.DISABLED);
             push(c, adb, cfg.toJson().toString(1), Paths.CONFIG, 0600);
             push(c, adb, watchdogScript(), Paths.WATCHDOG, 0700);
             // Android 12+ kills "phantom" child processes of apps; ours belong to adbd, but be safe.
             sh(adb, "/system/bin/device_config put activity_manager max_phantom_processes 2147483647 >/dev/null 2>&1; true");
-            String running = sh(adb, "P=$(cat " + Paths.WATCHDOG_PID + " 2>/dev/null); "
-                    + "[ -n \"$P\" ] && grep -q watchdog /proc/$P/cmdline 2>/dev/null && echo yes || echo no");
+            String running = sh(adb, WATCHDOG_ALIVE);
             if (running.endsWith("yes")) {
                 // The daemon notices the new config file and restarts itself.
                 return "Settings sent. The background service is restarting with them.";

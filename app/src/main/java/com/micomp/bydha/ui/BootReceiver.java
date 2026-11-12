@@ -13,6 +13,8 @@ public final class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (!Settings.enabled(context)) return;
         final Context app = context.getApplicationContext();
+        KeepAliveJob.schedule(app);
+        final String reason = "boot: " + intent.getAction();
         final PendingResult pending = goAsync();
         new Thread(() -> {
             try {
@@ -20,7 +22,7 @@ public final class BootReceiver extends BroadcastReceiver {
                 for (int attempt = 1; attempt <= 6; attempt++) {
                     Thread.sleep(attempt == 1 ? 15_000 : 20_000);
                     try {
-                        Log.i(TAG, DaemonControl.start(app, Settings.load(app)));
+                        Log.i(TAG, DaemonControl.ensureRunning(app, Settings.load(app), reason));
                         return;
                     } catch (Exception e) {
                         Log.w(TAG, "start attempt " + attempt + " failed: " + e.getMessage());
