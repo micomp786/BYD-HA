@@ -32,9 +32,12 @@ public final class KeepAliveJob extends JobService {
         final Context app = getApplicationContext();
         new Thread(() -> {
             try {
-                Log.i(TAG, DaemonControl.ensureRunning(app, Settings.load(app), "keep-alive check"));
+                String r = DaemonControl.ensureRunning(app, Settings.load(app), "keep-alive check");
+                Log.i(TAG, r);
+                if (!r.startsWith("Already")) Settings.note(app, "keep-alive: " + r);
             } catch (Exception e) {
                 Log.w(TAG, "keep-alive failed: " + e.getMessage());
+                Settings.note(app, "keep-alive failed: " + e.getMessage());
             } finally {
                 jobFinished(params, false);
             }

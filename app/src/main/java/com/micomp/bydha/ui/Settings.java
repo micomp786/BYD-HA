@@ -29,4 +29,19 @@ final class Settings {
     static void setEnabled(Context c, boolean on) {
         prefs(c).edit().putBoolean("enabled", on).apply();
     }
+
+    /** Keeps the last 30 background start attempts, so the Status screen can show them. */
+    static synchronized void note(Context c, String line) {
+        String stamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.ROOT)
+                .format(new java.util.Date());
+        String old = prefs(c).getString("history", "");
+        String all = stamp + " " + line + (old.isEmpty() ? "" : "\n" + old);
+        String[] lines = all.split("\n");
+        if (lines.length > 30) all = String.join("\n", java.util.Arrays.copyOf(lines, 30));
+        prefs(c).edit().putString("history", all).commit();
+    }
+
+    static String history(Context c) {
+        return prefs(c).getString("history", "");
+    }
 }

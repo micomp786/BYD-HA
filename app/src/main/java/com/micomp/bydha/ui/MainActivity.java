@@ -82,7 +82,7 @@ public final class MainActivity extends Activity {
             runJob("Stopping…", () -> DaemonControl.stop(this));
         });
         LinearLayout row2 = row();
-        button(row2, "Status", v -> runJob("Reading status…", () -> DaemonControl.status(this)));
+        button(row2, "Status", v -> runJob("Reading status…", () -> DaemonControl.statusWithHistory(this)));
         button(row2, "Log", v -> runJob("Reading log…", () -> DaemonControl.log(this)));
         button(row2, "Data dump", v -> runJob("Reading dump…", () -> DaemonControl.dump(this)));
 

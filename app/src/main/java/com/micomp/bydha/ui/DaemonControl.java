@@ -120,6 +120,18 @@ final class DaemonControl {
         }
     }
 
+    /** Status plus the app's own record of automatic starts; works even when ADB is unreachable. */
+    static String statusWithHistory(Context c) {
+        String st;
+        try {
+            st = status(c);
+        } catch (Exception e) {
+            st = "Status unavailable: " + e.getMessage();
+        }
+        String h = Settings.history(c);
+        return st + "\n\n--- automatic starts, newest first ---\n" + (h.isEmpty() ? "(none yet)" : h);
+    }
+
     static String log(Context c) throws Exception {
         try (Dadb adb = connect(c)) {
             // Newest lines first, so the latest events are at the top of the screen.
