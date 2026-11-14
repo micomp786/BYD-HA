@@ -119,16 +119,18 @@ final class VehicleReader {
         s.put("charging_gun", gunName);
         // On the Seal U DM-i Charging.getChargingPower stays 0 while AC charging; the cluster's
         // Instrument.getChargePower carries the real figure. Take the largest valid reading.
-        Double powerKw = null;
-        for (Object[] src : new Object[][]{
+        // Unplugged, the cluster value holds junk (359.4 kW was seen), so report 0 then, and
+        // ignore anything above what this car's charge port can take.
+        boolean plugged = gunName != null && !"none".equals(gunName) && !"v2l".equals(gunName);
+        Double powerKw = gunName != null && !plugged ? 0.0 : null;
+        if (plugged || gunName == null) for (Object[] src : new Object[][]{
                 {Byd.INSTRUMENT, "getChargePower"},
                 {Byd.CHARGING, "getChargingPower"},
                 {Byd.CHARGING, "getChargePower"}}) {
             Double v = num(byd.get((String) src[0], (String) src[1]));
-            if (in(v, 0, 400) && (powerKw == null || v > powerKw)) powerKw = round(v, 2);
+            if (in(v, 0, 60) && (powerKw == null || v > powerKw)) powerKw = round(v, 2);
         }
         s.put("charge_power_kw", powerKw);
-        boolean plugged = gunName != null && !"none".equals(gunName) && !"v2l".equals(gunName);
         s.put("plugged_in", gunName == null ? null : (plugged ? "ON" : "OFF"));
         if (gunName == null) {
             s.put("is_charging", null);

@@ -33,19 +33,56 @@ public final class MainActivity extends Activity {
     private EditText host, port, user, pass, name, poll, battery, tsKey, tsHost;
     private CheckBox tls, tlsInsecure, tsOn;
     private TextView output;
-    private LinearLayout root;
+    private LinearLayout root, form;
+    private Button settingsButton;
+
+    private void showSettings(boolean show) {
+        form.setVisibility(show ? View.VISIBLE : View.GONE);
+        settingsButton.setText(show ? "Hide settings" : "Settings");
+    }
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         if (Settings.enabled(this)) KeepAliveJob.schedule(this);
-        root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout page = new LinearLayout(this);
+        page.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(16);
-        root.setPadding(pad, pad, pad, pad);
+        page.setPadding(pad, pad, pad, pad);
+        root = page;
 
         heading("BYD → Home Assistant");
         note("Version " + appVersion());
+
+        // ---------- Buttons at the top ----------
+        LinearLayout row1 = row();
+        button(row1, "Start", v -> {
+            Config c = Settings.load(this);
+            if (c.brokerHost.isEmpty()) {
+                showSettings(true);
+                output.setText("Fill in the settings below, then press Save & start.");
+                return;
+            }
+            Settings.setEnabled(this, true);
+            KeepAliveJob.schedule(this);
+            runJob("Connecting to ADB… if a prompt appears, tap Allow.", () -> DaemonControl.start(this, c));
+        });
+        button(row1, "Stop", v -> {
+            Settings.setEnabled(this, false);
+            runJob("Stopping…", () -> DaemonControl.stop(this));
+        });
+        settingsButton = button(row1, "Settings", v -> showSettings(form.getVisibility() != View.VISIBLE));
+        LinearLayout row2 = row();
+        button(row2, "Status", v -> runJob("Reading status…", () -> DaemonControl.statusWithHistory(this)));
+        button(row2, "Log", v -> runJob("Reading log…", () -> DaemonControl.log(this)));
+        button(row2, "Data dump", v -> runJob("Reading dump…", () -> DaemonControl.dump(this)));
+
+        // ---------- Settings (hidden until the Settings button is pressed) ----------
+        form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        page.addView(form);
+        root = form;
+
         note("Sends your car's data to Home Assistant over MQTT. Needs Wireless ADB turned on in "
                 + "the head unit's developer settings. The first time you press Save & start, "
                 + "tap Allow (and tick \"Always allow\") on the ADB prompt.");
@@ -69,32 +106,32 @@ public final class MainActivity extends Activity {
         battery = field("Battery size in kWh (Seal U DM-i: 18.3)",
                 InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
 
-        LinearLayout row1 = row();
-        button(row1, "Save & start", v -> {
+        LinearLayout rowSave = row();
+        button(rowSave, "Save & start", v -> {
             Config c = readForm();
             Settings.save(this, c);
             Settings.setEnabled(this, true);
             KeepAliveJob.schedule(this);
+            showSettings(false);
             runJob("Connecting to ADB… if a prompt appears, tap Allow.", () -> DaemonControl.start(this, c));
         });
-        button(row1, "Stop", v -> {
-            Settings.setEnabled(this, false);
-            runJob("Stopping…", () -> DaemonControl.stop(this));
+        button(rowSave, "Cancel", v -> {
+            fillForm(Settings.load(this));
+            showSettings(false);
         });
-        LinearLayout row2 = row();
-        button(row2, "Status", v -> runJob("Reading status…", () -> DaemonControl.statusWithHistory(this)));
-        button(row2, "Log", v -> runJob("Reading log…", () -> DaemonControl.log(this)));
-        button(row2, "Data dump", v -> runJob("Reading dump…", () -> DaemonControl.dump(this)));
 
+        // ---------- Output ----------
+        root = page;
         output = new TextView(this);
         output.setTypeface(Typeface.MONOSPACE);
         output.setTextIsSelectable(true);
         output.setPadding(0, dp(12), 0, 0);
-        root.addView(output);
+        page.addView(output);
 
         ScrollView scroll = new ScrollView(this);
-        scroll.addView(root);
+        scroll.addView(page);
         setContentView(scroll);
+        showSettings(Settings.load(this).brokerHost.isEmpty());
         fillForm(Settings.load(this));
     }
 
@@ -222,10 +259,11 @@ public final class MainActivity extends Activity {
         return r;
     }
 
-    private void button(LinearLayout row, String text, View.OnClickListener l) {
+    private Button button(LinearLayout row, String text, View.OnClickListener l) {
         Button b = new Button(this);
         b.setText(text);
         b.setOnClickListener(l);
         row.addView(b, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        return b;
     }
 }
