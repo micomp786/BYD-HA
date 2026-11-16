@@ -92,6 +92,7 @@ public final class DaemonMain {
             if (tailscale != null) tailscale.stop();
         }));
 
+        sched.execute(DaemonMain::allowAppWakeUp);
         sched.execute(() -> {
             if (tailscale != null) tailscale.start();
             if (cfg.brokerHost.isEmpty()) {
@@ -108,6 +109,33 @@ public final class DaemonMain {
         }
 
         Looper.loop(); // keeps the main thread (and any SDK callbacks posted to it) alive
+    }
+
+    /**
+     * The head unit keeps the app stopped after power-up, so it can't restart this service.
+     * Enabling the app's notification listener makes Android wake the app after boot.
+     */
+    private static void allowAppWakeUp() {
+        String pkg = Paths.PACKAGE;
+        try {
+            Process p = new ProcessBuilder("sh", "-c",
+                    "cmd notification allow_listener " + pkg + "/" + pkg + ".ui.WakeListener; "
+                    + "cmd deviceidle whitelist +" + pkg + " >/dev/null; "
+                    + "cmd appops set " + pkg + " RUN_IN_BACKGROUND allow; "
+                    + "cmd appops set " + pkg + " RUN_ANY_IN_BACKGROUND allow; "
+                    + "cmd notification list_listeners 2>/dev/null | grep -q " + pkg + " && echo enabled || echo 'not confirmed'")
+                    .redirectErrorStream(true).start();
+            StringBuilder sb = new StringBuilder();
+            try (java.io.BufferedReader r = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(p.getInputStream()))) {
+                String line;
+                while ((line = r.readLine()) != null) sb.append(line.trim()).append(' ');
+            }
+            p.waitFor();
+            Log.i(TAG, "app wake-up listener: " + sb.toString().trim());
+        } catch (Exception e) {
+            Log.w(TAG, "could not enable app wake-up", e);
+        }
     }
 
     private void onCommand(String cmd) {

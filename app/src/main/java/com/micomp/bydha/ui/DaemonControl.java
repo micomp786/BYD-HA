@@ -88,6 +88,13 @@ final class DaemonControl {
             push(c, adb, watchdogScript(), Paths.WATCHDOG, 0700);
             // Android 12+ kills "phantom" child processes of apps; ours belong to adbd, but be safe.
             sh(adb, "/system/bin/device_config put activity_manager max_phantom_processes 2147483647 >/dev/null 2>&1; true");
+            // Let Android wake the app after the head unit powers up (see WakeListener), and keep
+            // it out of battery restrictions. The shell user is allowed to change these.
+            String pkg = c.getPackageName();
+            sh(adb, "cmd notification allow_listener " + pkg + "/" + WakeListener.class.getName()
+                    + " >/dev/null 2>&1; cmd deviceidle whitelist +" + pkg + " >/dev/null 2>&1; "
+                    + "cmd appops set " + pkg + " RUN_IN_BACKGROUND allow >/dev/null 2>&1; "
+                    + "cmd appops set " + pkg + " RUN_ANY_IN_BACKGROUND allow >/dev/null 2>&1; true");
             String running = sh(adb, WATCHDOG_ALIVE);
             if (running.endsWith("yes")) {
                 // The daemon notices the new config file and restarts itself.

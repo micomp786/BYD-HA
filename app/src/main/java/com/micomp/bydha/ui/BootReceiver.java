@@ -13,6 +13,7 @@ public final class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (!Settings.enabled(context)) return;
         Context app = context.getApplicationContext();
+        Settings.note(app, "received " + intent.getAction());
         KeepAliveJob.schedule(app);
         KeepAliveJob.startSoon(app, "boot: " + intent.getAction());
     }
